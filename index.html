@@ -75,6 +75,11 @@ button{font-family:inherit}
 .btn.primary:hover{background:var(--accent-2)}
 .btn svg{width:13px;height:13px;opacity:.8}
 .content{padding:18px 30px 70px;max-width:1320px}
+.menu-btn{display:none;flex:none;width:38px;height:38px;border-radius:9px;border:1px solid var(--line);
+  background:#fff;color:var(--ink-2);cursor:pointer;align-items:center;justify-content:center;margin-top:2px}
+.menu-btn svg{width:19px;height:19px}
+.menu-btn:hover{border-color:#c9d8de;background:#fbfdfd}
+.nav-backdrop{display:none}
 
 /* ---------- kpi ---------- */
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
@@ -219,13 +224,40 @@ table.tbl th.grp{background:#eef4f5}
 .modal .x{float:right;cursor:pointer;color:#93a6b3;font-size:20px;line-height:1}
 @media (max-width:1040px){
   .app{grid-template-columns:1fr}
-  .side{display:none}
+  .menu-btn{display:inline-flex}
+  .side{
+    position:fixed;top:0;left:0;bottom:0;width:282px;max-width:86vw;z-index:60;
+    transform:translateX(-100%);transition:transform .24s ease;
+    box-shadow:0 24px 60px rgba(8,20,30,.35)}
+  body.nav-open .side{transform:translateX(0)}
+  .nav-backdrop{display:block;position:fixed;inset:0;z-index:50;background:rgba(9,20,29,.46);
+    opacity:0;pointer-events:none;transition:opacity .24s ease}
+  body.nav-open .nav-backdrop{opacity:1;pointer-events:auto}
   .grid2{grid-template-columns:1fr}
   .grid4{grid-template-columns:1fr}
   .two-col{grid-template-columns:1fr}
-  .content,.topbar{padding-left:16px;padding-right:16px}
+  .topbar{flex-wrap:wrap;gap:10px;padding:12px 16px 10px}
+  .tt{flex:1;min-width:0}
+  .acts{flex-basis:100%;width:100%;flex-wrap:wrap;gap:7px;padding-top:0}
+  .btn{flex:1 1 auto;min-width:0;justify-content:center;height:34px;padding:0 8px}
+  .content{padding:14px 16px 60px}
+  .sch{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .sch svg{min-width:720px}
 }
-@media print{.side,.acts{display:none}.app{display:block;height:auto}body{background:#fff}}
+@media (max-width:600px){
+  body{font-size:13px}
+  .tt h1{font-size:18px}
+  .kpis{grid-template-columns:repeat(2,1fr);gap:9px}
+  .kpi{padding:10px 11px 9px}
+  .kpi .v{font-size:20px}
+  .field{grid-template-columns:1fr;gap:4px;align-items:stretch}
+  .field .iw{width:100%}
+  .inp{font-size:16px;height:38px}
+  .sch-inp{font-size:16px}
+  .card-b{padding:12px}
+  .btn{font-size:11.5px}
+}
+@media print{.side,.acts,.menu-btn{display:none}.app{display:block;height:auto}body{background:#fff}}
 
 /* ---------- 新 DCDC 原理图（G 元件库） ---------- */
 .sch svg.gsch .comp{fill:none;stroke:#2b4760;stroke-width:2}
@@ -301,6 +333,9 @@ table.tbl th.grp{background:#eef4f5}
   </aside>
   <main class="main" id="main">
     <header class="topbar">
+      <button class="menu-btn" id="btnMenu" aria-label="打开工具菜单">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
       <div class="tt"><h1 id="tTitle">—</h1><p id="tSub"></p></div>
       <div class="acts">
         <button class="btn" id="btnReset" title="恢复当前工具默认值">恢复默认</button>
@@ -313,6 +348,7 @@ table.tbl th.grp{background:#eef4f5}
     <div class="content" id="view"></div>
   </main>
 </div>
+<div class="nav-backdrop" id="navBackdrop"></div>
 <div class="modal" id="modal"><div class="box" id="modalBox"></div></div>
 <script>
 /* ==========================================================================
@@ -927,10 +963,15 @@ function updateDynamic(t, v) {
 }
 
 /* ---------- 事件 ---------- */
+function closeNav(){ document.body.classList.remove('nav-open'); }
+function openNav(){ document.body.classList.add('nav-open'); }
+document.getElementById('btnMenu').addEventListener('click', openNav);
+document.getElementById('navBackdrop').addEventListener('click', closeNav);
 document.getElementById('nav').addEventListener('click', e => {
   const it = e.target.closest('.nav-item');
-  if (it) { location.hash = it.dataset.id; }
+  if (it) { location.hash = it.dataset.id; closeNav(); }
 });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNav(); });
 document.getElementById('search').addEventListener('input', e => renderNav(e.target.value));
 window.addEventListener('hashchange', () => {
   const id = location.hash.replace('#', '');
@@ -2330,7 +2371,7 @@ tool({
     { k: '采样时间', v: r.tsample, unit: 'ns', hint: `1/fs − 转换时间` },
     { k: '电荷分享跳跃', v: r.Vjump, unit: 'mV', hint: `CADC/(CADC+CEXT)·Vin` },
     { k: '1/2 LSB', v: r.halfLSB * 1e6, unit: 'µV', hint: `${v.bits} bit @ ${v.Vref} V` },
-    { k: 'RC 截止频率', v: r.fc / 1000, unit: 'kHz', hint: '抗混叠能力参考' }
+    { k: 'RC 截止频率', raw: num(r.fc / 1e6, 2), unit: 'MHz', hint: '抗混叠能力参考' }
   ],
   outputs: (v, r) => [{
     section: '结果', items: [
