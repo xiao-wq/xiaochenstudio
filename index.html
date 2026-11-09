@@ -1185,15 +1185,16 @@ const G={
     s+=this._ann(x+34,(y1+y2)/2,62,ann);
     return s;
   },
-  capV(x,y1,y2,label,ann){
+  capV(x,y1,y2,label,ann,opts){
     const cy=(y1+y2)/2;
     let s=`<path class="wire" d="M${x},${y1} L${x},${cy-6} M${x},${cy+6} L${x},${y2}"/>`;
     s+=`<path class="comp" d="M${x-13},${cy-6} L${x+13},${cy-6} M${x-13},${cy+6} L${x+13},${cy+6}"/>`;
     s+=this.txt(x-18,cy+3,label,'lbl-b','end');
-    s+=this._ann(x,y2+30,66,ann);
+    if(opts&&opts.annRight) s+=this._ann(x+44,cy,66,ann);
+    else s+=this._ann(x,y2+30,66,ann);
     return s;
   },
-  resV(x,y1,y2,label,ann){
+  resV(x,y1,y2,label,ann,opts){
     const lead=12,cy=(y1+y2)/2,bodyH=Math.min(48,Math.abs(y2-y1)-2*lead);
     const by=cy-bodyH/2,ey=cy+bodyH/2;
     let d=`M${x},${y1} L${x},${by}`;
@@ -1203,8 +1204,13 @@ const G={
     }
     d+=` L${x},${ey} L${x},${y2}`;
     let s=`<path class="comp" d="${d}"/>`;
-    s+=this.txt(x-13,cy+3,label,'lbl-b','end');
-    s+=this._ann(x+34,cy,62,ann);
+    if(opts&&opts.annLeft){
+      s+=this.txt(x+15,cy+3,label,'lbl-b','start');
+      s+=this._ann(x-46,cy,62,ann);
+    }else{
+      s+=this.txt(x-13,cy+3,label,'lbl-b','end');
+      s+=this._ann(x+34,cy,62,ann);
+    }
     return s;
   },
   resH(x1,x2,y,label,ann){
@@ -2055,7 +2061,7 @@ tool({
     n.push({ l: 'info', t: '作为 ADC 前级时，源阻抗过高会拖慢采样建立，建议配合下一项「ADC 前端 RC」一起核算。' });
     return n;
   },
-  sch: (v, r) => `<svg class="gsch" viewBox="0 0 920 320" preserveAspectRatio="xMidYMid meet">
+  sch: (v, r) => `<svg class="gsch" viewBox="0 0 920 330" preserveAspectRatio="xMidYMid meet">
     ${G.wire([[164, 70], [300, 70]])}
     ${G.wire([[164, 310], [300, 310]])}
     ${G.resV(300, 70, 160, 'R1', {inp:'R1',val:v.R1,unit:'kΩ'})}
@@ -2136,7 +2142,7 @@ tool({
     ${G.resV(300, 60, 150, 'R', {inp:'Rset',val:v.Rset,unit:'kΩ'})}
     ${G.wire([[300, 150], [300, 220]])}
     ${G.node(300, 190)}
-    ${G.capV(300, 220, 260, 'C', {inp:'Cset',val:v.Cset,unit:'µF'})}
+    ${G.capV(300, 220, 260, 'C', {inp:'Cset',val:v.Cset,unit:'µF'},{annRight:true})}
     ${G.source(90, 140, 'VCC', {inp:'VCC',val:v.VCC,unit:'V'}, true)}
     ${G.gnd(300, 260)}
     ${G.wire([[300, 190], [430, 190]])}
@@ -2231,7 +2237,7 @@ tool({
     ${G.wire([[400, 140], [480, 140]])}
     ${G.node(480, 140)}
     ${G.wire([[480, 140], [480, 180]])}
-    ${G.capV(480, 180, 235, 'C', {inp:'Cset',val:v.Cset,unit:'nF'})}
+    ${G.capV(480, 180, 235, 'C', {inp:'Cset',val:v.Cset,unit:'nF'},{annRight:true})}
     ${G.gnd(480, 235)}
     ${G.wire([[480, 140], [818, 140]])}
     <path class="comp-fill" d="M830,140 L816,132 L816,148 Z"/>
@@ -2322,7 +2328,7 @@ tool({
     ${G.mosHP(470, 96)}
     ${G.wire([[300, 96], [300, 174]])}
     <path class="comp" d="M287,174 L313,174 M287,186 L313,186"/>
-    ${G.txt(300, 162, 'C2', 'lbl-b', 'middle')}
+    ${G.txt(320, 183, 'C2', 'lbl-b', 'start')}
     ${G.wire([[300, 186], [300, 270], [470, 270]])}
     ${G.inp(195, 180, 128, 'Cset', v.Cset, 'C2', 'nF')}
     ${G.wire([[470, 257], [470, 270]])}
@@ -2405,7 +2411,7 @@ tool({
     ${G.wire([[185, 175], [210, 175]])}
     ${G.resH(210, 400, 175, 'REXT', {txt:`${num(r.REXT, 0)} Ω`,kind:'act'})}
     ${G.node(400, 175)}
-    ${G.capV(400, 175, 265, 'CEXT', {inp:'CEXT',val:v.CEXT,unit:'nF'})}
+    ${G.capV(400, 175, 265, 'CEXT', {inp:'CEXT',val:v.CEXT,unit:'nF'},{annRight:true})}
     ${G.gnd(400, 265)}
     ${G.wire([[400, 175], [520, 175]])}
     <text class="lbl-b" x="460" y="130" text-anchor="middle" style="fill:#e2726e">KICK</text>
@@ -2488,7 +2494,7 @@ tool({
     ${G.resV(360, 50, 140, 'Rp', {txt:`${num(r.mid)} kΩ`,kind:'act'})}
     ${G.wire([[360, 140], [360, 200]])}
     ${G.node(360, 190)}
-    ${G.capV(360, 200, 225, 'CIN', {inp:'CIN',val:v.CIN,unit:'pF'})}
+    ${G.capV(360, 200, 225, 'CIN', {inp:'CIN',val:v.CIN,unit:'pF'},{annRight:true})}
     ${G.gnd(360, 225)}
     ${G.source(90, 130, 'VCC', {inp:'VCC',val:v.VCC,unit:'V'}, true)}
     ${G.wire([[360, 190], [560, 190]])}
@@ -3595,10 +3601,10 @@ tool({
     ${G.wire([[760, 101], [760, 50]])}
     ${G.source(760, 120, 'VCC', {inp:'VCC',val:v.VCC,unit:'V'}, true)}
     ${G.wire([[760, 139], [760, 270], [330, 270]])}
-    ${G.resV(240, 50, 130, 'R1', {inp:'R1',val:v.R1,unit:'kΩ'})}
+    ${G.resV(240, 50, 130, 'R1', {inp:'R1',val:v.R1,unit:'kΩ'},{annLeft:true})}
     ${G.wire([[240, 130], [240, 190]])}
     ${G.node(240, 160)}
-    ${G.resV(240, 190, 260, 'R2', {inp:'R2',val:v.R2,unit:'kΩ'})}
+    ${G.resV(240, 190, 260, 'R2', {inp:'R2',val:v.R2,unit:'kΩ'},{annLeft:true})}
     ${G.wire([[240, 260], [240, 290]])}
     ${G.gnd(240, 290)}
     ${G.wire([[240, 160], [330, 160]])}
@@ -3727,10 +3733,10 @@ tool({
     ${G.wire([[760, 101], [760, 50]])}
     ${G.wire([[760, 139], [760, 270], [330, 270]])}
     ${G.wire([[240, 50], [240, 110]])}
-    ${G.resV(240, 110, 150, 'R1', {inp:'R1',val:v.R1,unit:'kΩ'})}
+    ${G.resV(240, 110, 150, 'R1', {inp:'R1',val:v.R1,unit:'kΩ'},{annLeft:true})}
     ${G.node(240, 150)}
     ${G.wire([[240, 150], [240, 180]])}
-    ${G.resV(240, 180, 242, 'R2', {inp:'R2',val:v.R2,unit:'kΩ'})}
+    ${G.resV(240, 180, 242, 'R2', {inp:'R2',val:v.R2,unit:'kΩ'},{annLeft:true})}
     ${G.wire([[240, 242], [240, 262]])}
     ${G.gnd(240, 262)}
     ${G.wire([[240, 150], [330, 150]])}
