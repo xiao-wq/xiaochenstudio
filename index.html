@@ -1537,7 +1537,7 @@ function simOne(topo,v,r,dIL,C_uF){
   let VswOn,VswOff;
   if(topo==='buck'){VswOn=v.Vin;VswOff=-v.Vf/1000;}
   else if(topo==='boost'){VswOn=0;VswOff=v.Vout+v.Vf/1000;}
-  else {VswOn=0;VswOff=v.Vout-v.Vf/1000;}
+  else {VswOn=v.Vin;VswOff=v.Vout-v.Vf/1000;}
   /* DCM：本支路谷值若低于 0，改为从 0 起、回落钳 0 的真实波形 */
   const isDCM=dIL/2>ILavg;
   let Ipk=0,d2=1-r.D;
