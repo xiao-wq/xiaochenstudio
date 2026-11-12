@@ -1550,7 +1550,7 @@ function simOne(topo,v,r,dIL,C_uF){
   let A;
   if(topo==='buck')A=dIL/(8*v.fsw*C_uF)*1e6;
   else A=Iout*r.D/(v.fsw*C_uF)*1e6;
-  const time=[],sw=[],il=[],vo=[];
+  const time=[],sw=[],il=[];
   for(let i=0;i<=N;i++){
     const t=i/N*2*T;
     time.push(t*1e6);
@@ -1570,15 +1570,23 @@ function simOne(topo,v,r,dIL,C_uF){
     }
     il.push(iL);
     sw.push(on?VswOn:VswOff);
-    /* 输出纹波：直线段三角波（非正弦/抛物线） */
-    let vx;
-    if(topo==='buck'){
-      vx=on?(-A+2*A*(ph/r.D)):(A-2*A*((ph-r.D)/(1-r.D)));
-    }else{
-      vx=on?(A-2*A*(ph/r.D)):(-A+2*A*((ph-r.D)/(1-r.D)));
-    }
-    vo.push(vx);
   }
+  /* 电容电流（以"使纹波上升为正"的约定），积分得到纹波，拐点对齐 iL=Iout */
+  const ic=[];
+  for(let i=0;i<=N;i++){
+    const t=i/N*2*T,ph=(t%T)/T,on=ph<r.D;
+    let c;
+    if(topo==='buck')c=il[i]-Iout;
+    else if(topo==='boost')c=on?-Iout:(il[i]-Iout);
+    else c=on?Iout:(Iout-il[i]);
+    ic.push(c);
+  }
+  const acc=[0];
+  for(let i=1;i<=N;i++)acc[i]=acc[i-1]+(ic[i]+ic[i-1])/2;
+  const mean=acc.reduce((a,b)=>a+b,0)/(N+1);
+  const raw=acc.map(x=>x-mean);
+  const rawPk=Math.max(...raw.map(Math.abs))||1;
+  const vo=raw.map(x=>x*A/rawPk);
   return {time,sw,il,vo};
 }
 function simWaves(v,r,topo){
@@ -1606,7 +1614,12 @@ function simWaves(v,r,topo){
           {pts:time.map((t,i)=>[t,th.il[i]]),color:C_TH,dash:true,width:1.5},
           {pts:time.map((t,i)=>[t,ac.il[i]]),color:C_ACT,dash:false,width:1.8}
         ],
-        hlines:[{y:r.ILavg,label:'ILavg '+num(r.ILavg,3)}]},
+        hlines: topo==='buck'
+          ? [{y:v.Iout,color:'#e2726e',include:true,label:'Iout = ILavg '+num(v.Iout,3)}]
+          : [
+              {y:r.ILavg,label:'ILavg '+num(r.ILavg,3)},
+              {y:v.Iout,color:'#e2726e',include:true,label:'Iout '+num(v.Iout,3)}
+            ]},
       {title:'ΔVo  输出开关纹波',unit:'mV',
         series:[
           {pts:time.map((t,i)=>[t,th.vo[i]]),color:C_TH,dash:true,width:1.5},
@@ -1641,6 +1654,7 @@ function drawChart(cv,spec){
     const top=Tp+pi*ph;
     const all=[];
     p.series.forEach(s=>s.pts.forEach(pt=>all.push(pt[1])));
+    (p.hlines||[]).forEach(h=>{if(h.include)all.push(h.y);});
     let y0=Math.min(...all),y1=Math.max(...all);
     const pad=(y1-y0)*0.12||Math.abs(y1)*0.1||1;
     const lo=y0-pad,hi=y1+pad;
@@ -1659,10 +1673,10 @@ function drawChart(cv,spec){
     (p.hlines||[]).forEach(h=>{
       const yy=Y(h.y);
       if(yy<plotTop-2||yy>plotBot+2)return;
-      ctx.strokeStyle=C_REF;ctx.setLineDash([4,4]);ctx.lineWidth=1;
+      ctx.strokeStyle=h.color||C_REF;ctx.setLineDash([4,4]);ctx.lineWidth=1;
       ctx.beginPath();ctx.moveTo(L,yy);ctx.lineTo(W-Rm,yy);ctx.stroke();ctx.setLineDash([]);
       if(h.label){
-        ctx.fillStyle=C_REF;ctx.font='500 9.5px ui-monospace,monospace';ctx.textAlign='right';
+        ctx.fillStyle=h.color||C_REF;ctx.font='500 9.5px ui-monospace,monospace';ctx.textAlign='right';
         ctx.fillText(h.label,W-Rm-3,yy-3);
       }
     });
